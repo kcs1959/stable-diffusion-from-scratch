@@ -1,1 +1,1 @@
-# stable-diffusion-from-scratch をみんなで作るリポジトリ
+# stable-diffusion-from-scratch をみんなで作るリポジトリgir
