@@ -19,7 +19,7 @@ class SelfAttention(nn.Module):
         #これはattentionを適用する前の入力のprojection
         #スライドのWO行列の形状はdmodel*dmoedl
         #Linear(入力特徴量、出力特徴量、バイアス)
-        self.in_proj=nn.Linear(d_embed*3,d_embed*3,bias=in_proj_bias) #self attentionを適用する前に加えるバイアス
+        self.in_proj=nn.Linear(d_embed,d_embed*3,bias=in_proj_bias) #self attentionを適用する前に加えるバイアス
         self.out_proj=nn.Linear(d_embed,d_embed, bias=out_proj_bias)  #self attentionを適用した後に加えるバイアス
         self.n_heads=n_heads  #ヘッドの数を保存
         self.d_head=d_embed//n_heads  #マルチヘッドはそれぞれのトークンの埋め込みの一部を見るので割り算　動画の1:36:17

@@ -13,6 +13,7 @@ class VAE_Encoder(nn.Sequential):
             nn.Conv2d(3,128,kernel_size=3,padding=1),#畳み込みを定義、最初は3チャンネル、動画では畳み込みの説明があった
             
             #次のブロック  第一引数は入力チャンネル数,第二引数は出力チャンネル数
+            VAE_ResidualBlock(128,128),
             
             #(Batch_Size,128,Height,Width)ー> (Batch_Size,128,Height,Width)
             #残差ブロック
