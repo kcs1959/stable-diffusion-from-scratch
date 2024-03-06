@@ -19,10 +19,13 @@ class VAE_AttentionBlock(nn.Module):
 
         residue=x  
 
+        x = self.groupnorm(x)
+
         n,c,h,w=x.shape
 
+
         #(Batch_Size,Features,Height,Width)->(Batch_Size,Features,Height*Width)
-        x=x.view(n,c,h*w)  #viewで入力テンソルxの形状を変える
+        x=x.view((n,c,h*w))  #viewで入力テンソルxの形状を変える
         
         #形状の変化　Batch_Size,Features,Height*Width)->(Batch_Size,　Height*Width,　　Features,)
         x=x.transpose(-1,-2)   
