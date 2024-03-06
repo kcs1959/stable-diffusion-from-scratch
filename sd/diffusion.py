@@ -300,7 +300,7 @@ class UNET(nn.Module):
             
             SwitchSequential(UNET_ResidualBlock(1280,640),UNET_AttentionBlock(8,80)),
 
-            SwitchSequential(UNET_ResidualBlock(960,640),UNET_AttentionBlock(8,40)),
+            SwitchSequential(UNET_ResidualBlock(960,640),UNET_AttentionBlock(8,40),Upsample(640)),
 
             SwitchSequential(UNET_ResidualBlock(960,320),UNET_AttentionBlock(8,40)),
 
