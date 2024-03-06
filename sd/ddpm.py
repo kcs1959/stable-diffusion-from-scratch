@@ -63,7 +63,7 @@ class DDPMSampler:
         # α_cumprod[t-1] = 1*α_0*α_1*,...,α_t-1
         alpha_prod_t_prev = self.alpha_cumprod[prev_t] if prev_t >= 0 else self.one
         beta_prod_t = 1 - alpha_prod_t
-        beta_prod_t_prev = 1 = alpha_prod_t_prev
+        beta_prod_t_prev = 1 - alpha_prod_t_prev
         # α[t] = (α_0*α_1*,...,α_t-1*α_t) / (α_0*α_1*,...,α_t-1)
         current_alpha_t = alpha_prod_t / alpha_prod_t_prev
         current_beta_t = 1 - current_alpha_t
