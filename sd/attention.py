@@ -19,7 +19,7 @@ class SelfAttention(nn.Module):
         #これはattentionを適用する前の入力のprojection
         #スライドのWO行列の形状はdmodel*dmoedl
         #Linear(入力特徴量、出力特徴量、バイアス)
-        self.in_proj=nn.Linear(d_embed*3,d_embed*3,bias=in_proj_bias) #self attentionを適用する前に加えるバイアス
+        self.in_proj=nn.Linear(d_embed,d_embed*3,bias=in_proj_bias) #self attentionを適用する前に加えるバイアス
         self.out_proj=nn.Linear(d_embed,d_embed, bias=out_proj_bias)  #self attentionを適用した後に加えるバイアス
         self.n_heads=n_heads  #ヘッドの数を保存
         self.d_head=d_embed//n_heads  #マルチヘッドはそれぞれのトークンの埋め込みの一部を見るので割り算　動画の1:36:17
@@ -32,7 +32,7 @@ class SelfAttention(nn.Module):
         batch_size,sequence_length,d_embed=input_shape
         
         #入力の形状から別の形状にする 中間形状 intermidiate shape
-        intermim_shape=(batch_size,sequence_length,self.n_heads,self.d_head)
+        interim_shape=(batch_size,sequence_length,self.n_heads,self.d_head)
         
         #(Batch_size,seq_len,dim) -> (Batch_size, seq_len, dim*3)  -> 3tensprs of shape(Batch_size,Seq_len, Dim)
         #xはクエリ、キー、バリューが結合された行列
@@ -44,9 +44,9 @@ class SelfAttention(nn.Module):
         #ここの形状の変化?
         #view(interim_shape)　(Batch_Size,Seq_len,Dim)  -> (Batch_size, Seq_len ,H,  Dim/H)  
         #transpose(1,2,)　　　(Batch_size, Seq_len ,H,  Dim/H)  -> (Batch_Size,H,Seq_len,Dim/H)
-        q=q.view(intermim_shape).transpose(1,2)  #2次元目と3次元目の位置を入れ替える
-        k=k.view(intermim_shape).transpose(1,2)
-        v=v.view(intermim_shape).transpose(1,2)
+        q=q.view(interim_shape).transpose(1,2)  #2次元目と3次元目の位置を入れ替える
+        k=k.view(interim_shape).transpose(1,2)
+        v=v.view(interim_shape).transpose(1,2)
 
         
         #Attention(Q,K,V)の式のQKT
@@ -73,9 +73,9 @@ class SelfAttention(nn.Module):
          
             mask=torch.ones_like(weight,dtype=torch.bool).triu(1) #weightテンソルと同じ形状の真偽値テンソルを作成し、対角線上と対角線より上をTrue 1にする
             
-            weight.masked_fill(mask,-torch.inf) #masked_fill関数はマスクのTrueに対応する位置の要素を指定した値にする　ここでは-toch.inf -∞
+            weight.masked_fill_(mask,-torch.inf) #masked_fill関数はマスクのTrueに対応する位置の要素を指定した値にする　ここでは-toch.inf -∞
         
-        weight/=mask.sqrt(self.d_head) #Attentionの式の分数の部分、weightはQKT
+        weight/=math.sqrt(self.d_head) #Attentionの式の分数の部分、weightはQKT
 
         weight=F.softmax(weight,dim=-1)  #weightテンソルの対角線より上の部分はマイナス無限で、ソフトマックス関数に通すとほぼ0になる
         
@@ -87,7 +87,7 @@ class SelfAttention(nn.Module):
         
         output=output.reshape(input_shape) #入力の時のテンソルの形状にする
 
-        output=self.output_proj(output)  #バイアスを加える
+        output=self.out_proj(output)  #バイアスを加える
         
         #(Batch_Size,Seqlen,Dim)
         return output

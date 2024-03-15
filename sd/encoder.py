@@ -13,6 +13,7 @@ class VAE_Encoder(nn.Sequential):
             nn.Conv2d(3,128,kernel_size=3,padding=1),#畳み込みを定義、最初は3チャンネル、動画では畳み込みの説明があった
             
             #次のブロック  第一引数は入力チャンネル数,第二引数は出力チャンネル数
+            VAE_ResidualBlock(128,128),
             
             #(Batch_Size,128,Height,Width)ー> (Batch_Size,128,Height,Width)
             #残差ブロック
@@ -75,11 +76,11 @@ class VAE_Encoder(nn.Sequential):
             #strideは1でパディングをしているので画像の大きさは変わらない
             #conv2d(入力チャンネル数、出力チャンネル数、カーネルサイズ、パディング)
             #padding=1なので入力テンソルの各辺に1ピクセルずつ0パディング
-            nn.Conv2d(512,8,kernel_size=3,padding=1)
+            nn.Conv2d(512,8,kernel_size=3,padding=1),
             
             #(Batch_Size,8,Height/8 ,Width/8  )ー> (Batch_Size,8,Height /  8 , Width  /  8) 
             #padding=0なのでパディングは追加されない
-            nn.Conv2d(8,8,kernel_size=1,padding=0)
+            nn.Conv2d(8,8,kernel_size=1,padding=0),
 
             #なぜカーネルサイズ1で畳み込みしてるのか、畳み込みになっていないのではないか
         )

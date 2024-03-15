@@ -44,22 +44,22 @@ class UNET_ResidualBlock(nn.Module):
      
      #この中の意味
     #Unetはtime_embeddingとプロンプトと入力の3つを受け取る
-    def __init__(self,in_channles,out_channels:int,n_time=1280):
+    def __init__(self,in_channels,out_channels:int,n_time=1280):
         super().__init__()
         #GroupNorm(幾つのグループに分割するか、入力テンソルのチャンネル数)
-        self.groupnorm_feature=nn.GroupNorm(32,in_channles)  #各グループの特徴マップが平均0、分散1になる
-        self.conv_feature=nn.Linear(n_time,out_channels,kernel_size=3,padding=1) 
+        self.groupnorm_feature=nn.GroupNorm(32,in_channels)  #各グループの特徴マップが平均0、分散1になる
+        self.conv_feature=nn.Conv2d(in_channels,out_channels,kernel_size=3,padding=1) 
         self.linear_time=nn.Linear(n_time,out_channels)
 
         self.groupnorm_merged=nn.GroupNorm(32,out_channels)
         self.conv_merged=nn.Conv2d(out_channels,out_channels,kernel_size=3,padding=1)
 
-        if in_channles==out_channels:
+        if in_channels==out_channels:
             self.residual_layer=nn.Identity()
         
         #入力と出力のチャンネル数を同じにして足し算をできるようにする
         else:
-            self.residual_layer=nn.Conv2d(in_channles,out_channels,kernel_size=1,padding=0)
+            self.residual_layer=nn.Conv2d(in_channels,out_channels,kernel_size=1,padding=0)
 
     def forward(self,feature,time):
         #feature  (Batch_size,入力チャンネル、高さ、幅)
@@ -95,11 +95,11 @@ class UNET_AttentionBlock(nn.Module):
     #n_embd   各アテンションヘッドの埋め込みの次元数　　アテンションヘッドごとの特徴ベクトルのサイズ
     #d_context  これは何か
 
-    def __init(self,n_head:int,n_embd:int,d_context=768):  #d_contextはtransormerモデルでよく使われrているらしい
+    def __init__(self,n_head:int,n_embd:int,d_context=768):  #d_contextはtransormerモデルでよく使われrているらしい
         super().__init__()
         channels=n_head*n_embd
 
-        self.groupnorm=nn.nn.GroupNorm(32,channel,eps=1e-6)
+        self.groupnorm=nn.GroupNorm(32,channels,eps=1e-6)
         self.conv_input=nn.Conv2d(channels,channels,kernel_size=1,padding=0)
 
         self.layernorm_1=nn.LayerNorm(channels)
@@ -110,7 +110,7 @@ class UNET_AttentionBlock(nn.Module):
         self.linear_geglu_1=nn.Linear(channels,4*channels*2)
         self.linear_geglu_2=nn.Linear(4*channels,channels)
 
-        self.conv_output=nn.COnv2d(channels,channels,kernel_size=1,padding=0)
+        self.conv_output=nn.Conv2d(channels,channels,kernel_size=1,padding=0)
 
     def forward(self,x,context):
         #x:(Batch_Size,Seq_Len,Dim)
@@ -199,6 +199,7 @@ class Diffusion(nn.Module):
     #timeは潜在表現がノイズ化された時の時刻を記録
     #Unetはノイズ除去のタイムステップを受け取る必要がある
     def __init__(self):
+        super().__init__()
         self.time_embedding=TimeEmbedding(320)
         self.unet=UNET()
         self.final=UNET_OutputLayer(320,4)
@@ -228,13 +229,15 @@ class UNET(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.encoders=nn.Module([
+        self.encoders=nn.ModuleList([
 
             #(Batch_Size,4,Height  /  8 ,Width  /  8)
             #conv2d(入力チャンネル数、出力チャンネル数、カーネルサイズ、パディング)
             SwitchSequential(nn.Conv2d(4,320,kernel_size=3,padding=1)),  #Unetの図の一番左のチャンネル数を増やす3層を一度に4から320チャンネルにしている
 
-            SwitchSequential(UNET_ResidualBlock(320,320),UNET_AttentionBlock(8,40)),
+            SwitchSequential(
+                UNET_ResidualBlock(320,320),
+                UNET_AttentionBlock(8,40)),
 
             SwitchSequential(UNET_ResidualBlock(320,320),UNET_AttentionBlock(8,40)),
             
@@ -297,7 +300,7 @@ class UNET(nn.Module):
             
             SwitchSequential(UNET_ResidualBlock(1280,640),UNET_AttentionBlock(8,80)),
 
-            SwitchSequential(UNET_ResidualBlock(960,640),UNET_AttentionBlock(8,40)),
+            SwitchSequential(UNET_ResidualBlock(960,640),UNET_AttentionBlock(8,40),Upsample(640)),
 
             SwitchSequential(UNET_ResidualBlock(960,320),UNET_AttentionBlock(8,40)),
 

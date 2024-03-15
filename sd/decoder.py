@@ -19,10 +19,13 @@ class VAE_AttentionBlock(nn.Module):
 
         residue=x  
 
+        x = self.groupnorm(x)
+
         n,c,h,w=x.shape
 
+
         #(Batch_Size,Features,Height,Width)->(Batch_Size,Features,Height*Width)
-        x=x.view(n,c,h*w)  #viewで入力テンソルxの形状を変える
+        x=x.view((n,c,h*w))  #viewで入力テンソルxの形状を変える
         
         #形状の変化　Batch_Size,Features,Height*Width)->(Batch_Size,　Height*Width,　　Features,)
         x=x.transpose(-1,-2)   
@@ -42,23 +45,23 @@ class VAE_AttentionBlock(nn.Module):
 
 
 class VAE_ResidualBlock(nn.Module):
-    def __init__(self,in_channles,out_channels):
+    def __init__(self,in_channels,out_channels):
         super().__init__()
-        self.groupnorm_1=nn.GroupNorm(32,in_channles)  #グループ正規化　32グループに分割して各グループ内で正規化
-        self.conv_1=nn.Conv2d(in_channles,out_channels,kernel_size=3,padding=1)
+        self.groupnorm_1=nn.GroupNorm(32,in_channels)  #グループ正規化　32グループに分割して各グループ内で正規化
+        self.conv_1=nn.Conv2d(in_channels,out_channels,kernel_size=3,padding=1)
 
         self.groupnorm_2=nn.GroupNorm(32,out_channels)
-        self.conv_2=nn.Conv2d(in_channles,out_channels,kernel_size=3,padding=1)
+        self.conv_2=nn.Conv2d(out_channels,out_channels,kernel_size=3,padding=1)
         
         #スキップ接続
         #層を飛ばして接続する
         #入力チャンネル数と出力チャンネル数が異なる時、
         #なぜか
         #xのチャンネル数は入力チャンネル数、forwardメソッドのreturnでx+residueとしたときに次元数が合わないかららしい
-        if in_channles==out_channels:
+        if in_channels==out_channels:
             self.residual_layer=nn.Identity()  #Identity()を使い入力と出力が同じ
         else:
-            self.residual_layer=nn.Conv2d(in_channles,out_channels,kernel_size=1,padding=0)
+            self.residual_layer=nn.Conv2d(in_channels,out_channels,kernel_size=1,padding=0)
 
     def forward(self,x: torch.Tensor)  ->torch.Tensor:  #入力がテンソルxで出力もテンソル
         #入力xの形状: (Batch_Size,In_channels,Height,Width)　ここのInchannelsとはどこのこと
