@@ -29,8 +29,8 @@ class VAE_AttentionBlock(nn.Module):
         
         #形状の変化　Batch_Size,Features,Height*Width)->(Batch_Size,　Height*Width,　　Features,)
         x=x.transpose(-1,-2)   
-       
-       #形状は同じ
+        
+        #形状は同じ
         x=self.attention(x)
         
         #Batch_Size,Features,Height*Width)->(Batch_Size,　Features,  Height, Width)

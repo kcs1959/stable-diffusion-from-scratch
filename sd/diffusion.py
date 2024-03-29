@@ -119,7 +119,7 @@ class UNET_AttentionBlock(nn.Module):
 
         x=self.groupnorm(x)
 
-        self.conv_input(x)
+        x = self.conv_input(x)
 
         n,c,h,w=x.shape
         
@@ -133,15 +133,15 @@ class UNET_AttentionBlock(nn.Module):
         #スキップ接続の残差　アテンションを通らない矢印
         residue_short=x  #残差を保存
         x=self.layernorm_1(x)  #スキップ接続のMulti-Head Attentionの部分
-        self.attention_1(x)  #セルフアテンション
+        x = self.attention_1(x)  #セルフアテンション
         #スキップ接続　アテンションを通らない矢印
         x+=residue_short #アテンションを通った後のxに保存してあった残差を足す
 
         #スキップ接続とクロスアテンション
         residue_short=x   #1つ目のスキップ接続の出力についてスキップ接続を用いた残差ブロック
         #Normalization+self attention with skip connection
-        x=self.layernorm_1(x)  #引数はチャンネル数
-        self.attention_2(x,context)  #潜在表現とプロンプトのクロスアテンション　引数はヘッド数、チャンネル数、d_context
+        x=self.layernorm_2(x)  #引数はチャンネル数
+        x=self.attention_2(x,context)  #潜在表現とプロンプトのクロスアテンション　引数はヘッド数、チャンネル数、d_context
         x+=residue_short
         
         #スキップ接続とレイヤー正規化
@@ -149,11 +149,11 @@ class UNET_AttentionBlock(nn.Module):
         #feed forward
         x=self.layernorm_3(x) #レイヤー正規化
         x,gate=self.linear_geglu_1(x).chunk(2,dim=-1)
-        x=x*F.gglu(gate)
+        x=x*F.gelu(gate)
         x=self.linear_geglu_2(x)
         x+=residue_short
 
-        x=x.tranpose(-1,-2)  #クロスアテンションを使うために転置していた部分を元の状態にする
+        x=x.transpose(-1,-2)  #クロスアテンションを使うために転置していた部分を元の状態にする
         
         x=x.view((n,c,h,w))  #テンソルはバッチサイズ、チャンネル数、高さ、幅に再形成される
 
@@ -235,9 +235,7 @@ class UNET(nn.Module):
             #conv2d(入力チャンネル数、出力チャンネル数、カーネルサイズ、パディング)
             SwitchSequential(nn.Conv2d(4,320,kernel_size=3,padding=1)),  #Unetの図の一番左のチャンネル数を増やす3層を一度に4から320チャンネルにしている
 
-            SwitchSequential(
-                UNET_ResidualBlock(320,320),
-                UNET_AttentionBlock(8,40)),
+            SwitchSequential(UNET_ResidualBlock(320,320), UNET_AttentionBlock(8,40)),
 
             SwitchSequential(UNET_ResidualBlock(320,320),UNET_AttentionBlock(8,40)),
             
@@ -281,7 +279,7 @@ class UNET(nn.Module):
             UNET_ResidualBlock(1280,1280),
         )
         #bottleneckの出力の特徴量次元数は1280次元
-   
+    
         self.decoders=nn.ModuleList([
             #(Batch_Size,2560,Height  /  64 ,Width  /  64)->(Batch_Size,2560,Height  /  64 ,Width  /  64)
             SwitchSequential(UNET_ResidualBlock(2560,1280)),#bottleneckの出力とスキップ接続で合わせて2560　Unetの図の一番下の部分デコーダーの最初
@@ -300,12 +298,35 @@ class UNET(nn.Module):
             
             SwitchSequential(UNET_ResidualBlock(1280,640),UNET_AttentionBlock(8,80)),
 
-            SwitchSequential(UNET_ResidualBlock(960,640),UNET_AttentionBlock(8,40),Upsample(640)),
+            SwitchSequential(UNET_ResidualBlock(960,640),UNET_AttentionBlock(8,80),Upsample(640)),
 
             SwitchSequential(UNET_ResidualBlock(960,320),UNET_AttentionBlock(8,40)),
 
-            SwitchSequential(UNET_ResidualBlock(640,320),UNET_AttentionBlock(8,80)),
+            SwitchSequential(UNET_ResidualBlock(640,320),UNET_AttentionBlock(8,40)),
 
             SwitchSequential(UNET_ResidualBlock(640,320),UNET_AttentionBlock(8,40)),
 
         ])
+    
+    def forward(self, x, context, time):
+        print(x.shape)
+        # x: (Batch_Size, 4, Height / 8, Width / 8)
+        # context: (Batch_Size, Seq_Len, Dim) 
+        # time: (1, 1280)
+
+        skip_connections = []
+        for layers in self.encoders:
+            x = layers(x, context, time)
+            skip_connections.append(x)
+
+        x = self.bottleneck(x, context, time)
+
+        for idx, layers in enumerate(self.decoders):
+            print(idx)
+            # Since we always concat with the skip connection of the encoder, the number of features increases before being sent to the decoder's layer
+            print(x.shape)
+            print(skip_connections[-1].shape)
+            x = torch.cat((x, skip_connections.pop()), dim=1) 
+            x = layers(x, context, time)
+        
+        return x

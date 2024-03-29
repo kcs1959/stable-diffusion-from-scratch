@@ -1,3 +1,4 @@
+import math
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -83,7 +84,7 @@ class SelfAttention(nn.Module):
         output=weight@v   #weightテンソルの対角線より上の部分は0に近い値のため、未来の情報はoutputにほぼ含まれない
         
         #(Batch_Size,H,Seqlen,Dim/H) ->(Batch_SIze,Sequencelen, H,Dim/H)
-        output=output.tranpose(1,2)
+        output=output.transpose(1,2)
         
         output=output.reshape(input_shape) #入力の時のテンソルの形状にする
 
@@ -111,7 +112,7 @@ class CrossAttention(nn.Module):
         self.q_proj=nn.Linear(d_embed,d_embed,bias=in_proj_bias)  #線形層は入力特徴量に対してy=xA^T+bを適用する b=バイアス項
         self.k_proj=nn.Linear(d_cross,d_embed,bias=in_proj_bias)  #重みAとバイアスbは訓練時にデータから学習されるモデルのパラメータ、モデルはタスクに最適な特徴表現を見つけることができる
         self.v_proj=nn.Linear(d_cross,d_embed,bias=in_proj_bias)
-        self.out_proj=nn.Linear(d_embed,d_embed,bias=in_proj_bias)
+        self.out_proj=nn.Linear(d_embed,d_embed,bias=out_proj_bias)
         self.n_heads=n_heads
         self.d_head=d_embed//n_heads  #マルチヘッドアテンションの各ヘッドに割り当てられる特徴量次元数を、モデルの入力に対する埋め込みの次元数//ヘッドの数で計算
 
