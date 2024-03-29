@@ -23,7 +23,7 @@ class DDPMSampler:
         self.timesteps = torch.from_numpy(np.arange(0, num_training_steps)[::-1].copy())
 
     def set_inference_timesteps(self, num_inference_steps=50):
-        self.num_training_steps = num_inference_steps
+        self.num_inference_steps = num_inference_steps
         # 999, 998, 997, 996, ...,0 -> 1000 steps
         # 999, 999-20, 999-40,...,0 -> 50 steps
 
@@ -33,7 +33,7 @@ class DDPMSampler:
 
     # 一度前のタイムステップを計算する関数
     def _get_previous_timestep(self, timestep: int) -> int:
-        prev_t = timestep - (self.num_training_steps // self.num_training_steps)
+        prev_t = timestep - (self.num_training_steps // self.num_inference_steps)
         return prev_t
     
     def _get_variance(self, timestep: int) -> torch.Tensor:
@@ -78,7 +78,7 @@ class DDPMSampler:
         # (7)式からμ_t(x_t, x_0)を計算する
         pred_original_sample_coeff = (alpha_prod_t_prev**0.5 * current_beta_t) / beta_prod_t
         current_sample_coeff = (alpha_prod_t**0.5 * beta_prod_t_prev) / beta_prod_t
-        pred_prev_sample = pred_original_sample_coeff * pred_prev_sample + current_sample_coeff * latents
+        pred_prev_sample = pred_original_sample_coeff * pred_original_samples + current_sample_coeff * latents
 
         # 何回か使用するため，分散は関数で計算する((7)式参照)
         variance = 0

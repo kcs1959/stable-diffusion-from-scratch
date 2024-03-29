@@ -62,4 +62,6 @@ output_image = pipeline.generate(
 )
 
 # Combine the input image and the output image into a single image.
-Image.fromarray(output_image)
+image = Image.fromarray(output_image)
+
+image.save("output.png")
