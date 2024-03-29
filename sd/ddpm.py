@@ -94,6 +94,8 @@ class DDPMSampler:
         # 分散を加える((6)式の値の完成)
         pred_prev_sample = pred_prev_sample + variance
 
+        return pred_prev_sample
+
     def set_strength(self, strength=1):
         """
         image to imageでは オリジナル画像 -> encoder -> add noise to latentという過程が最初にあるが，

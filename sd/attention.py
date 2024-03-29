@@ -129,11 +129,11 @@ class CrossAttention(nn.Module):
         #クエリにWq,Wk,Wvをかける
         q=self.q_proj(x)
         k=self.k_proj(y)
-        v=self.v_proj(x)
+        v=self.v_proj(y)
 
-        q=q.view(intermim_shape).tranpose(1,2)
-        k=k.view(intermim_shape).tranpose(1,2)
-        v=v.view(intermim_shape).tranpose(1,2)
+        q=q.view(intermim_shape).transpose(1,2)
+        k=k.view(intermim_shape).transpose(1,2)
+        v=v.view(intermim_shape).transpose(1,2)
         
         #attentionの式の一部
         weight=q@k.transpose(-1,-2)
