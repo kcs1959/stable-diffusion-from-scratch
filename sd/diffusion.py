@@ -1,1 +1,1 @@
-/home/lemolatoon/tmp/pytorch-stable-diffusion/sd/diffusion.py
+my_diffusion.py

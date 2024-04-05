@@ -172,10 +172,11 @@ class SwitchSequential(nn.Sequential):
 
             elif isinstance(layer,UNET_ResidualBlock):   #layerがUNET_ResidualBlockの時
                 x=layer(x,time)   #残差ブロックは特徴とtimeを入力とする
-           
+            
             else:
                 x=layer(x)
-            return x
+
+        return x
         
 class UNET_OutputLayer(nn.Module):  #なぜこれだけ独立しているのか
     def __init__(self,in_channles:int,out_channels:int):
@@ -309,7 +310,6 @@ class UNET(nn.Module):
         ])
     
     def forward(self, x, context, time):
-        print(x.shape)
         # x: (Batch_Size, 4, Height / 8, Width / 8)
         # context: (Batch_Size, Seq_Len, Dim) 
         # time: (1, 1280)
@@ -321,11 +321,8 @@ class UNET(nn.Module):
 
         x = self.bottleneck(x, context, time)
 
-        for idx, layers in enumerate(self.decoders):
-            print(idx)
+        for layers in self.decoders:
             # Since we always concat with the skip connection of the encoder, the number of features increases before being sent to the decoder's layer
-            print(x.shape)
-            print(skip_connections[-1].shape)
             x = torch.cat((x, skip_connections.pop()), dim=1) 
             x = layers(x, context, time)
         
