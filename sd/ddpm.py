@@ -3,24 +3,36 @@ import numpy as np
 
 class DDPMSampler:
 
-    def __init__(self, generator: torch.Generator,
-                 num_training_steps=1000, 
-                 beta_start: float = 0.00085,
-                 beta_end: float = 0.0120):
-        # the scaled Linear scheduler
-        self.betas = torch.linspace(beta_start ** 0.5, beta_end ** 0.5, 
-                                    num_training_steps, dtype=torch.float32) ** 2
-        
+    def __init__(self, generator: torch.Generator, num_training_steps=1000, beta_start: float = 0.00085, beta_end: float = 0.0120):
+        # Params "beta_start" and "beta_end" taken from: https://github.com/CompVis/stable-diffusion/blob/21f890f9da3cfbeaba8e2ac3c425ee9e998d5229/configs/stable-diffusion/v1-inference.yaml#L5C8-L5C8
+        # For the naming conventions, refer to the DDPM paper (https://arxiv.org/pdf/2006.11239.pdf)
+        self.betas = torch.linspace(beta_start ** 0.5, beta_end ** 0.5, num_training_steps, dtype=torch.float32) ** 2
         self.alphas = 1.0 - self.betas
-        # [alpha_0, alpha_0*alpha_1, alpha_0*alpha_1*alpha_2,...]
-        self.alpha_cumprod = torch.cumprod(self.alphas, 0) 
+        self.alpha_cumprod = torch.cumprod(self.alphas, dim=0)
         self.one = torch.tensor(1.0)
 
         self.generator = generator
-        self.num_training_steps = num_training_steps
 
-        # initial timesteps
+        self.num_training_steps = num_training_steps
         self.timesteps = torch.from_numpy(np.arange(0, num_training_steps)[::-1].copy())
+    # def __init__(self, generator: torch.Generator,
+    #              num_training_steps=1000, 
+    #              beta_start: float = 0.00085,
+    #              beta_end: float = 0.0120):
+    #     # the scaled Linear scheduler
+    #     self.betas = torch.linspace(beta_start ** 0.5, beta_end ** 0.5, 
+    #                                 num_training_steps, dtype=torch.float32) ** 2
+    #     
+    #     self.alphas = 1.0 - self.betas
+    #     # [alpha_0, alpha_0*alpha_1, alpha_0*alpha_1*alpha_2,...]
+    #     self.alpha_cumprod = torch.cumprod(self.alphas, 0) 
+    #     self.one = torch.tensor(1.0)
+
+    #     self.generator = generator
+    #     self.num_training_steps = num_training_steps
+
+    #     # initial timesteps
+    #     self.timesteps = torch.from_numpy(np.arange(0, num_training_steps)[::-1].copy())
 
     def set_inference_timesteps(self, num_inference_steps=50):
         self.num_inference_steps = num_inference_steps
@@ -77,7 +89,7 @@ class DDPMSampler:
 
         # (7)式からμ_t(x_t, x_0)を計算する
         pred_original_sample_coeff = (alpha_prod_t_prev**0.5 * current_beta_t) / beta_prod_t
-        current_sample_coeff = (alpha_prod_t**0.5 * beta_prod_t_prev) / beta_prod_t
+        current_sample_coeff = (current_alpha_t**0.5 * beta_prod_t_prev) / beta_prod_t
         pred_prev_sample = pred_original_sample_coeff * pred_original_samples + current_sample_coeff * latents
 
         # 何回か使用するため，分散は関数で計算する((7)式参照)
@@ -95,6 +107,7 @@ class DDPMSampler:
         pred_prev_sample = pred_prev_sample + variance
 
         return pred_prev_sample
+
 
     def set_strength(self, strength=1):
         """
